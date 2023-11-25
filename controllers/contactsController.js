@@ -52,10 +52,6 @@ const removeContact = async (contactId) => {
 
 
 const updateContact = async (contactId, updatedFields) => {
-    const { error } = contactSchema.validate(updatedFields);
-    if (error) {
-        throw new Error(error.details[0].message);
-    }
 
     const contacts = await listContacts();
     const updatedContacts = contacts.map((c) =>
