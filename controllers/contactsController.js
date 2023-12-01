@@ -1,65 +1,103 @@
-const fs = require('fs/promises');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 const Joi = require('joi');
+const Contact = require('../models/contactModel');
 
-const contactsPath = path.join(process.cwd(), 'contacts.json');
 const contactSchema = Joi.object({
     name: Joi.string().required(),
     email: Joi.string().email().required(),
     phone: Joi.string().required(),
+    favorite: Joi.boolean().required(),
 });
 
 const listContacts = async () => {
-    const data = await fs.readFile(contactsPath, 'utf-8');
-    return JSON.parse(data);
+    const contacts = await Contact.find();
+    return contacts;
 };
 
-const getById = async (contactId) => {
-    const contacts = await listContacts();
-    const contact = contacts.find((c) => c.id === contactId);
-    return contact;
+const getById = async (id) => {
+    return Contact.findById(id);
 };
 
-const addContact = async (newContact) => {
-    const { error } = contactSchema.validate(newContact);
-    if (error) {
-        throw new Error(error.details[0].message);
+const addContact = async (req, res, next) => {
+    const { name, email, phone, favorite } = req.body;
+
+    try {
+        const newContact = await Contact.create({ name, email, phone, favorite });
+        res.status(201).json(newContact);
+    } catch (error) {
+        next(error);
+    }
+};
+
+const removeContact = async (id) => {
+    if (!id) {
+        throw new Error('Contact ID is missing');
     }
 
-    const contacts = await listContacts();
+    const result = await Contact.findByIdAndDelete(id);
 
-    const newId = uuidv4();
-
-    const updatedContact = { id: newId, ...newContact };
-    const updatedContacts = Array.isArray(contacts) ? [...contacts, updatedContact] : [updatedContact];
-
-    await fs.writeFile(contactsPath, JSON.stringify(updatedContacts, null, 2));
-    return updatedContact;
-};
-
-const removeContact = async (contactId) => {
-    const contacts = await listContacts();
-    const updatedContacts = contacts.filter((c) => c.id !== contactId);
-
-    if (contacts.length === updatedContacts.length) {
-        return { message: 'Not found' };
+    if (!result) {
+        throw new Error('Contact not found');
     }
 
-    await fs.writeFile(contactsPath, JSON.stringify(updatedContacts, null, 2));
-    return { message: 'contact deleted' };
+    return { message: 'Contact deleted' };
 };
 
+const updateContact = async (id, updatedFields) => {
+    if (!id) {
+        throw new Error('Contact ID is missing');
+    }
 
-const updateContact = async (contactId, updatedFields) => {
+    try {
+        const updatedContact = await Contact.findByIdAndUpdate(
+            id,
+            updatedFields,
+            { new: true, runValidators: true }
+        );
 
-    const contacts = await listContacts();
-    const updatedContacts = contacts.map((c) =>
-        c.id === contactId ? { ...c, ...updatedFields } : c
-    );
+        if (!updatedContact) {
+            throw new Error('Contact not found');
+        }
 
-    await fs.writeFile(contactsPath, JSON.stringify(updatedContacts, null, 2));
-    return getById(contactId);
+        return updatedContact;
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            throw new Error('Validation error. Please check your input data.');
+        }
+
+        throw error;
+    }
 };
 
-module.exports = { listContacts, getById, addContact, removeContact, updateContact, contactSchema };
+const updateStatusContact = (contactId, body) => {
+    if (!body || typeof body.favorite === 'undefined') {
+        return Promise.reject(new Error('missing field favorite'));
+    }
+
+    return Contact.findByIdAndUpdate(
+        contactId,
+        { favorite: body.favorite },
+        { new: true, runValidators: true }
+    )
+        .then((updatedContact) => {
+            if (!updatedContact) {
+                return Promise.reject(new Error('Not found'));
+            }
+            return updatedContact;
+        })
+        .catch((error) => {
+            if (error.name === 'ValidationError') {
+                return Promise.reject(new Error('Validation error'));
+            }
+            return Promise.reject(error);
+        });
+};
+
+module.exports = {
+    listContacts,
+    getById,
+    addContact,
+    removeContact,
+    updateContact,
+    contactSchema,
+    updateStatusContact,
+};
