@@ -1,9 +1,12 @@
 const express = require('express');
 const logger = require('morgan');
 const cors = require('cors');
+const connectDB = require('./db/db');
 const contactsRouter = require('./routes/api/contacts');
 
 const app = express();
+
+connectDB();
 
 const formatsLogger = app.get('env') === 'development' ? 'dev' : 'short';
 
