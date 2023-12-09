@@ -11,27 +11,9 @@ const {
   updateStatusContact,
 } = require('../../controllers/contactsController');
 
-router.get('/', authMiddleware, async (req, res, next) => {
-  try {
-    const contacts = await listContacts(req, res, next);
-    res.status(200).json(Array.isArray(contacts) ? contacts : [contacts]);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/', authMiddleware, listContacts);
 
-router.get('/:id', authMiddleware, async (req, res, next) => {
-  try {
-    const contact = await getById(req.params.id);
-    if (contact) {
-      res.json(contact);
-    } else {
-      res.status(404).json({ message: 'Not found' });
-    }
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid ID' });
-  }
-});
+router.get('/:id', authMiddleware, getById);
 
 router.post('/', authMiddleware, async (req, res) => {
   const { name, email, phone, favorite } = req.body;

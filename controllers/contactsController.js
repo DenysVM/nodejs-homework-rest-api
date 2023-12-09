@@ -8,23 +8,63 @@ const contactSchema = Joi.object({
     favorite: Joi.boolean().required(),
 });
 
-const listContacts = async () => {
-    const contacts = await Contact.find();
-    return contacts;
-};
-
-const getById = async (id) => {
-    return Contact.findById(id);
-};
-
-const addContact = async (req, res, next) => {
-    const { name, email, phone, favorite } = req.body;
-
+const listContacts = async (req, res) => {
     try {
-        const newContact = await Contact.create({ name, email, phone, favorite });
-        res.status(201).json(newContact);
+        const currentUser = req.user;
+        const query = { owner: currentUser._id };
+
+        const contacts = await Contact.find(query).populate('owner', 'email');
+
+        res.status(200).json(contacts);
     } catch (error) {
-        next(error);
+        console.error('Internal Server Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+const getById = async (req, res) => {
+    try {
+        const currentUser = req.user;
+        const contactId = req.params.id;
+
+        const contact = await Contact.findOne({ _id: contactId, owner: currentUser._id });
+
+        if (!contact) {
+            return res.status(404).json({ message: 'Contact not found' });
+        }
+
+        res.status(200).json({ contact });
+    } catch (error) {
+        console.error('Internal Server Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+const addContact = async (req, res) => {
+    try {
+        const currentUser = req.user;
+
+        if (!currentUser) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const { name, email, phone, favorite } = req.body;
+
+        const newContact = await Contact.create({
+            name,
+            email,
+            phone,
+            favorite,
+            owner: currentUser._id,
+        });
+
+        currentUser.contacts.push(newContact._id);
+        await currentUser.save();
+
+        res.status(201).json({ contact: newContact });
+    } catch (error) {
+        console.error('Internal Server Error:', error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 

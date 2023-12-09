@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
     token: {
         type: String,
     },
+    contacts: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Contact',
+    }],
 });
 
 userSchema.methods.generateAuthToken = async function () {
