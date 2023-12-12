@@ -1,4 +1,5 @@
 const express = require('express');
+const authMiddleware = require('../../middlewares/authMiddleware');
 const router = express.Router();
 const {
   listContacts,
@@ -8,31 +9,13 @@ const {
   updateContact,
   contactSchema,
   updateStatusContact,
-} = require('..//../controllers/contactsController');
+} = require('../../controllers/contactsController');
 
-router.get('/', async (req, res, next) => {
-  try {
-    const contacts = await listContacts(req, res, next);
-    res.status(200).json(Array.isArray(contacts) ? contacts : [contacts]);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/', authMiddleware, listContacts);
 
-router.get('/:id', async (req, res, next) => {
-  try {
-    const contact = await getById(req.params.id);
-    if (contact) {
-      res.json(contact);
-    } else {
-      res.status(404).json({ message: 'Not found' });
-    }
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid ID' });
-  }
-});
+router.get('/:id', authMiddleware, getById);
 
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   const { name, email, phone, favorite } = req.body;
 
   const { error } = contactSchema.validate({ name, email, phone, favorite });
@@ -44,7 +27,7 @@ router.post('/', async (req, res) => {
   res.status(201).json(result);
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req, res) => {
   const id = req.params.id;
 
   try {
@@ -59,7 +42,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   const { name, email, phone, favorite } = req.body;
 
   const { error } = contactSchema.validate({ name, email, phone, favorite });
@@ -85,7 +68,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.patch('/:contactId/favorite', (req, res) => {
+router.patch('/:contactId/favorite', authMiddleware, (req, res) => {
   const contactId = req.params.contactId;
   const body = req.body;
 
