@@ -117,9 +117,22 @@ const getCurrentUser = (req, res) => {
     }
 };
 
+const uploadAvatar = async (req, res) => {
+    try {
+        if (!req.user.avatarURL) {
+            return res.status(400).json({ message: 'Avatar not uploaded' });
+        }
+
+        res.status(200).json({ avatarURL: req.user.avatarURL });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     register,
     login,
     logout,
     getCurrentUser,
+    uploadAvatar,
 };
