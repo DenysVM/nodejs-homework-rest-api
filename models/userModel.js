@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const gravatar = require('gravatar');
 
 const userSchema = new mongoose.Schema({
     password: {
@@ -23,6 +24,9 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Contact',
     }],
+    avatarURL: {
+        type: String,
+    },
 });
 
 userSchema.methods.generateAuthToken = async function () {
@@ -36,6 +40,14 @@ userSchema.methods.removeToken = async function () {
     this.token = null;
     await this.save();
 };
+
+userSchema.pre('save', function (next) {
+    if (!this.avatarURL) {
+        const avatar = gravatar.url(this.email, { s: '200', r: 'pg', d: 'mm' });
+        this.avatarURL = avatar;
+    }
+    next();
+});
 
 const User = mongoose.model('User', userSchema);
 
